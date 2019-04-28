@@ -74,12 +74,20 @@ import serial
 import cv2
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QDialog, QPushButton, QDialogButtonBox
-from GS_GUI import Ui_GroundStationSensorControl
+from PyQt5.QtWidgets import QApplication, QDialog, QPushButton
+from PyQt5.uic import loadUi
+
+
 
 
 # lets the GUI know which camera to use - camera = 0 is built in webcam, camera = 1 is FPV
-camera = 1
+camera = 0
+
+# variables to control GUI initial size and placement on screen
+winLeft = 400
+winTop = 300
+winWidth = 1900
+winHeight = 900
 
 # serial object to connect to ground station
 ser = serial.Serial()
@@ -87,10 +95,10 @@ ser = serial.Serial()
 # determines if GS port is open/connected or not
 portOpen = False
 
-# data logging file name
-data_logger_name = (r"testFlight_"
-                    + str(datetime.now().isoformat())[:19].replace("-", "_").replace(":", "_").replace("T", "_")
-                    + r".txt")
+# datalogging file name
+dataloggerName = r"testFlight_" + str(datetime.now().isoformat())[:19].replace("-", "_").replace(":", "_").replace("T", "_") + r".txt"
+
+
 
 
 def serial_ports():
@@ -102,17 +110,13 @@ def serial_ports():
     :returns:
         A list of the serial ports available on the system
     """
-
     if sys.platform.startswith('win'):
         ports = ['COM%s' % (i + 1) for i in range(256)]
-
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
         # this excludes your current terminal "/dev/tty"
         ports = glob.glob('/dev/tty[A-Za-z]*')
-
     elif sys.platform.startswith('darwin'):
         ports = glob.glob('/dev/tty.*')
-
     else:
         raise EnvironmentError('Unsupported platform')
 
@@ -122,15 +126,15 @@ def serial_ports():
             s = serial.Serial(port)
             s.close()
             result.append(port)
-
         except (OSError, serial.SerialException):
             pass
-
     return result
 
 
+
+
 class CVThread(QThread):
-    change_pixel_map = pyqtSignal(QImage)
+    changePixmap = pyqtSignal(QImage)
 
     def run(self):
         try:
@@ -141,61 +145,220 @@ class CVThread(QThread):
             while True:
                 ret, frame = cap.read()
                 if ret:
-                    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    convert_to_qt_format = QImage(rgb_image.data, rgb_image.shape[1], rgb_image.shape[0],
-                                                  QImage.Format_RGB888)
-                    p = convert_to_qt_format.scaled(640 * 2, 480 * 2, Qt.KeepAspectRatio)
+                    rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    convertToQtFormat = QImage(rgbImage.data, rgbImage.shape[1], rgbImage.shape[0],
+                                               QImage.Format_RGB888)
+                    p = convertToQtFormat.scaled(640 * 2, 480 * 2, Qt.KeepAspectRatio)
                     self.changePixmap.emit(p)
 
         except Exception:
             print(traceback.format_exc())
 
 
-class RadioThread(QThread):
+
+
+class radioThread(QThread):
     # create a pySignal to tell GUI when new data has arrived
-    update_values = pyqtSignal(str)
+    updateVals = pyqtSignal(str)
 
     def run(self):
         # run forever
-        while True:
+        while(True):
             try:
                 # open and append telemetry to logging .txt
-                with open(data_logger_name, 'a') as f:
+                with open(dataloggerName, 'a') as f:
                     # run forever
-                    while True:
+                    while (True):
                         # test if serial port is open
-                        if ser.is_open:
+                        if (ser.is_open):
                             # get the data
                             data = str(ser.readline())
                             data = data.replace("b'", "")
                             data = data.replace("'", "")
                             data = data.replace(r"\r\n", "\n")
 
-                            # write the data to the data logging file
+                            # write the data to the datalogging file
                             f.write(data)
 
-                            if data != '\n':
-                                # optional debugging print
+                            if(data != '\n'):
+                                # optinal debugging print
                                 self.updateVals.emit(data)
 
-            except:
+            except Exception:
                 print(traceback.format_exc())
 
 
-class AppWindow(QDialog):
+# noinspection SpellCheckingInspection
+class App(QDialog):
     def __init__(self):
+        # initialize the GUI
         super().__init__()
-        self.ui = Ui_GroundStationSensorControl()
-        self.ui.setupUi(self)
+        loadUi('GS_GUI.ui', self)
+
+        #echo AT commands on by default
+        self.echo = True
+
+        #set GUI window geometry
+        self.left = winLeft
+        self.top = winTop
+        self.width = winWidth
+        self.height = winHeight
+
+        #find all available serial ports
+        self.refreshPorts()
+
+        #connect signals
+        self.Refresh_Ports.clicked.connect(self.refreshPorts)
+        self.Send_Commands.clicked.connect(self.processAT)
+        self.Connect_Radio.clicked.connect(self.connectPort)
+
+        #initialize threads and show GUI
+        self.initUI()
+
+
+
+
+    @pyqtSlot(QImage)
+    def setImage(self, image):
+        self.FPV_Feed.setPixmap(QPixmap.fromImage(image))
+
+
+
+
+    def initUI(self):
+        # set window shape and size
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        # do video processing on a separate thread (parallel processing for speed)
+        vidThead = CVThread(self)
+        vidThead.changePixmap.connect(self.setImage)
+        vidThead.start()
+
+        # take care of serial port/data handling
+        dataThread = radioThread(self)
+        dataThread.updateVals.connect(self.updateTelem)
+        dataThread.start()
+
+        # display the GUI
         self.show()
 
 
-def main():
+
+
+    def updateTelem(self, data):
+        # get rid of newline chars
+        data.replace("\n", "")
+
+        # get the name
+        dataName = data.split(" ")[0]
+
+        # get the numerical data
+        dataValue = data.split(" ")[1]
+
+        if(dataName == "Alt:"):
+            self.Altitude.display(float(dataValue))
+        elif(dataName == "Roll:"):
+            pass
+        elif (dataName == "Pitch:"):
+            pass
+        elif (dataName == "Vel:"):
+            self.Airspeed.display(float(dataValue))
+        elif (dataName == "Lat:"):
+            self.Latitude.display(float(dataValue))
+        elif (dataName == "Lon:"):
+            self.Longitude.display(float(dataValue))
+        elif (dataName == "UTC_y:"):
+            pass
+        elif (dataName == "UTC_M:"):
+            pass
+        elif (dataName == "UTC_d:"):
+            pass
+        elif (dataName == "UTC_h:"):
+            pass
+        elif (dataName == "UTC_m:"):
+            pass
+        elif (dataName == "UTC_s:"):
+            pass
+        elif (dataName == "SOG:"):
+            pass
+        elif (dataName == "COG:"):
+            pass
+
+
+
+
+    @pyqtSlot()
+    def processAT(self):
+        """
+        Type "Echo on" or "Echo Off" to toggle whether or not the typed commands show up in the output
+        """
+        if (self.UAV_AT_Command_Line.text().lower().split(" ")[0] == "echo" and
+                self.UAV_AT_Command_Line.text().lower().split(" ")[1] == "off"):
+            self.echo = False
+        elif (self.UAV_AT_Command_Line.text().lower().split(" ")[0] == "echo" and
+              self.UAV_AT_Command_Line.text().lower().split(" ")[1] == "on"):
+            self.echo = False
+
+        commands = "Echo: " + self.UAV_AT_Command_Line.text() + "\n";
+
+        #test if GS is connected
+        if(portOpen):
+            if(self.echo):
+                #echo command
+                self.Command_Output.append(commands)
+        else:
+            #print error
+            self.Command_Output.append("GS NOT CONNECTED")
+
+        #clear user input
+        self.UAV_AT_Command_Line.clear()
+
+
+
+
+    def refreshPorts(self):
+        try:
+            portList = []
+            ports = serial_ports()
+
+            #only execute if you don't already have a connection to the GS
+            if(not ser.is_open):
+                if (len(ports) > 0):
+                    for port in range(len(ports)):
+                        portList.append(self.tr(str(ports[port])))
+
+                self.COM_Select.clear()
+
+                if (len(ports) > 0):
+                    self.COM_Select.addItems(portList)
+                else:
+                    self.COM_Select.addItem("None Available")
+        except Exception:
+            print(traceback.format_exc())
+
+
+
+
+    def connectPort(self):
+        port = self.COM_Select.currentText()
+
+        if (not (port == "None Available")):
+            try:
+                if(ser.port != str(port) or not ser.is_open):
+                    ser.baudrate = 115200
+                    ser.port = str(port)
+                    ser.open()
+                    self.Command_Output.setText("Connected to radio on %s\n" % port)
+
+            except:
+                self.Command_Output.append("ERROR - CANNOT CONNECT TO COM PORT\n")
+        else:
+            self.Command_Output.append("No Radio COM Port Available - Check Device Manager and/or Wiring\n")
+
+
+
+
+if __name__ == '__main__':
     app = QApplication(sys.argv)
-    w = AppWindow()
-    w.show()
+    ex = App()
     sys.exit(app.exec_())
-
-
-if __name__ == "__main__":
-    main()
