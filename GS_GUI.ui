@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>GroundStationSensorControl</class>
+ <widget class="QDialog" name="GroundStationSensorControl">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1894</width>
+    <height>889</height>
+   </rect>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::WheelFocus</enum>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::NoContextMenu</enum>
+  </property>
+  <property name="acceptDrops">
+   <bool>false</bool>
+  </property>
+  <property name="windowTitle">
+   <string>GS Sensor Control Panel</string>
+  </property>
+  <property name="modal">
+   <bool>false</bool>
+  </property>
+  <widget class="QDialogButtonBox" name="buttonBox">
+   <property name="geometry">
+    <rect>
+     <x>1690</x>
+     <y>820</y>
+     <width>131</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Horizontal</enum>
+   </property>
+   <property name="standardButtons">
+    <set>QDialogButtonBox::Close</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="FPV_Feed">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>130</y>
+     <width>831</width>
+     <height>721</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>FPV Video Feed</string>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::Box</enum>
+   </property>
+   <property name="midLineWidth">
+    <number>4</number>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="COM_Select">
+   <property name="geometry">
+    <rect>
+     <x>1090</x>
+     <y>170</y>
+     <width>191</width>
+     <height>51</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>1090</x>
+     <y>130</y>
+     <width>311</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Radio COM Port</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>10</y>
+     <width>1251</width>
+     <height>101</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>MS Shell Dlg 2</family>
+     <pointsize>20</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::StyledPanel</enum>
+   </property>
+   <property name="frameShadow">
+    <enum>QFrame::Raised</enum>
+   </property>
+   <property name="lineWidth">
+    <number>3</number>
+   </property>
+   <property name="midLineWidth">
+    <number>0</number>
+   </property>
+   <property name="text">
+    <string>Ground Station Sensor Control Panel</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::AutoText</enum>
+   </property>
+   <property name="scaledContents">
+    <bool>true</bool>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+   <property name="textInteractionFlags">
+    <set>Qt::NoTextInteraction</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_3">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>410</y>
+     <width>311</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Airspeed (m/s)</string>
+   </property>
+  </widget>
+  <widget class="QLCDNumber" name="Airspeed">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>450</y>
+     <width>311</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Meters Per Second</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>530</y>
+     <width>311</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Altitude (Meters)</string>
+   </property>
+  </widget>
+  <widget class="QLCDNumber" name="Altitude">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>570</y>
+     <width>311</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Meters</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_5">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>650</y>
+     <width>311</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Latitude</string>
+   </property>
+  </widget>
+  <widget class="QLCDNumber" name="Latitude">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>690</y>
+     <width>311</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Lat - Decimal</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_6">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>770</y>
+     <width>311</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Longitude</string>
+   </property>
+  </widget>
+  <widget class="QLCDNumber" name="Longitude">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>810</y>
+     <width>311</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Lon - Decimal</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Refresh_Ports">
+   <property name="geometry">
+    <rect>
+     <x>1090</x>
+     <y>250</y>
+     <width>191</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Refresh Ports</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="UAV_AT_Command_Line">
+   <property name="geometry">
+    <rect>
+     <x>1310</x>
+     <y>90</y>
+     <width>551</width>
+     <height>51</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_7">
+   <property name="geometry">
+    <rect>
+     <x>1310</x>
+     <y>50</y>
+     <width>551</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>UAV AT Command Line</string>
+   </property>
+  </widget>
+  <widget class="QFrame" name="frame">
+   <property name="geometry">
+    <rect>
+     <x>880</x>
+     <y>130</y>
+     <width>181</width>
+     <height>191</height>
+    </rect>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::Box</enum>
+   </property>
+   <property name="frameShadow">
+    <enum>QFrame::Raised</enum>
+   </property>
+   <widget class="QRadioButton" name="Sensor_Control_Only">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>110</y>
+      <width>131</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="toolTip">
+     <string>Use joysticks to fly the UAV</string>
+    </property>
+    <property name="toolTipDuration">
+     <number>-1</number>
+    </property>
+    <property name="statusTip">
+     <string/>
+    </property>
+    <property name="whatsThis">
+     <string>Use joysticks to fly the UAV</string>
+    </property>
+    <property name="text">
+     <string>Sensor Control Only</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="Full_Pilot_Control">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>20</y>
+      <width>131</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="toolTip">
+     <string>Use joysticks to fly the UAV</string>
+    </property>
+    <property name="toolTipDuration">
+     <number>-1</number>
+    </property>
+    <property name="statusTip">
+     <string/>
+    </property>
+    <property name="whatsThis">
+     <string>Use joysticks to fly the UAV</string>
+    </property>
+    <property name="text">
+     <string>Full Pilot Controls</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QPushButton" name="Send_Commands">
+   <property name="geometry">
+    <rect>
+     <x>1310</x>
+     <y>170</y>
+     <width>551</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Send Commands</string>
+   </property>
+  </widget>
+  <widget class="QTextEdit" name="Command_Output">
+   <property name="geometry">
+    <rect>
+     <x>1313</x>
+     <y>250</y>
+     <width>551</width>
+     <height>541</height>
+    </rect>
+   </property>
+   <property name="readOnly">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Connect_Radio">
+   <property name="geometry">
+    <rect>
+     <x>1090</x>
+     <y>330</y>
+     <width>191</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Connect Radio</string>
+   </property>
+  </widget>
+  <zorder>frame</zorder>
+  <zorder>buttonBox</zorder>
+  <zorder>FPV_Feed</zorder>
+  <zorder>COM_Select</zorder>
+  <zorder>label</zorder>
+  <zorder>label_2</zorder>
+  <zorder>label_3</zorder>
+  <zorder>Airspeed</zorder>
+  <zorder>label_4</zorder>
+  <zorder>Altitude</zorder>
+  <zorder>label_5</zorder>
+  <zorder>Latitude</zorder>
+  <zorder>label_6</zorder>
+  <zorder>Longitude</zorder>
+  <zorder>Refresh_Ports</zorder>
+  <zorder>UAV_AT_Command_Line</zorder>
+  <zorder>label_7</zorder>
+  <zorder>Send_Commands</zorder>
+  <zorder>Command_Output</zorder>
+  <zorder>Connect_Radio</zorder>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>GroundStationSensorControl</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>550</x>
+     <y>440</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>570</x>
+     <y>461</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>GroundStationSensorControl</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>680</x>
+     <y>451</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>665</x>
+     <y>461</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
