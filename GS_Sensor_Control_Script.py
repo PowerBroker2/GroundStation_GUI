@@ -78,8 +78,6 @@ from PyQt5.QtWidgets import QApplication, QDialog, QPushButton
 from PyQt5.uic import loadUi
 
 
-
-
 # lets the GUI know which camera to use - camera = 0 is built in webcam, camera = 1 is FPV
 camera = 0
 
@@ -95,10 +93,10 @@ ser = serial.Serial()
 # determines if GS port is open/connected or not
 portOpen = False
 
-# datalogging file name
-dataloggerName = r"testFlight_" + str(datetime.now().isoformat())[:19].replace("-", "_").replace(":", "_").replace("T", "_") + r".txt"
-
-
+# data logging file name
+dataloggerName = (r"testFlight_"
+                  + str(datetime.now().isoformat())[:19].replace("-", "_").replace(":", "_").replace("T", "_")
+                  + r".txt")
 
 
 def serial_ports():
@@ -110,13 +108,9 @@ def serial_ports():
     :returns:
         A list of the serial ports available on the system
     """
+
     if sys.platform.startswith('win'):
         ports = ['COM%s' % (i + 1) for i in range(256)]
-    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        # this excludes your current terminal "/dev/tty"
-        ports = glob.glob('/dev/tty[A-Za-z]*')
-    elif sys.platform.startswith('darwin'):
-        ports = glob.glob('/dev/tty.*')
     else:
         raise EnvironmentError('Unsupported platform')
 
@@ -128,9 +122,8 @@ def serial_ports():
             result.append(port)
         except (OSError, serial.SerialException):
             pass
+
     return result
-
-
 
 
 class CVThread(QThread):
@@ -140,6 +133,9 @@ class CVThread(QThread):
         try:
             # get a new frame from the camera
             cap = cv2.VideoCapture(camera)
+
+            cv2.VideoCapture.set(cap, cv2.CAP_PROP_FRAME_WIDTH, 2592)
+            cv2.VideoCapture.set(cap, cv2.CAP_PROP_FRAME_HEIGHT, 1944)
 
             # infinite loop
             while True:
@@ -153,8 +149,6 @@ class CVThread(QThread):
 
         except Exception:
             print(traceback.format_exc())
-
-
 
 
 class radioThread(QThread):
@@ -180,8 +174,8 @@ class radioThread(QThread):
                             # write the data to the datalogging file
                             f.write(data)
 
-                            if(data != '\n'):
-                                # optinal debugging print
+                            if data != '\n':
+                                # optional debugging print
                                 self.updateVals.emit(data)
 
             except Exception:
@@ -195,35 +189,30 @@ class App(QDialog):
         super().__init__()
         loadUi('GS_GUI.ui', self)
 
-        #echo AT commands on by default
+        # echo AT commands on by default
         self.echo = True
 
-        #set GUI window geometry
+        # set GUI window geometry
         self.left = winLeft
         self.top = winTop
         self.width = winWidth
         self.height = winHeight
 
-        #find all available serial ports
+        # find all available serial ports
         self.refreshPorts()
 
-        #connect signals
+        # connect signals
         self.Refresh_Ports.clicked.connect(self.refreshPorts)
         self.Send_Commands.clicked.connect(self.processAT)
         self.Connect_Radio.clicked.connect(self.connectPort)
 
-        #initialize threads and show GUI
+        # initialize threads and show GUI
         self.initUI()
-
-
-
 
     @pyqtSlot(QImage)
     def setImage(self, image):
-        self.FPV_Feed.setPixmap(QPixmap.fromImage(image))
-
-
-
+        if self.EnableFPV.isChecked():
+            self.FPV_Feed.setPixmap(QPixmap.fromImage(image))
 
     def initUI(self):
         # set window shape and size
@@ -242,9 +231,6 @@ class App(QDialog):
         # display the GUI
         self.show()
 
-
-
-
     def updateTelem(self, data):
         # get rid of newline chars
         data.replace("\n", "")
@@ -255,37 +241,34 @@ class App(QDialog):
         # get the numerical data
         dataValue = data.split(" ")[1]
 
-        if(dataName == "Alt:"):
+        if dataName == "Alt:":
             self.Altitude.display(float(dataValue))
-        elif(dataName == "Roll:"):
+        elif dataName == "Roll:":
             pass
-        elif (dataName == "Pitch:"):
+        elif dataName == "Pitch:":
             pass
-        elif (dataName == "Vel:"):
+        elif dataName == "Vel:":
             self.Airspeed.display(float(dataValue))
-        elif (dataName == "Lat:"):
+        elif dataName == "Lat:":
             self.Latitude.display(float(dataValue))
-        elif (dataName == "Lon:"):
+        elif dataName == "Lon:":
             self.Longitude.display(float(dataValue))
-        elif (dataName == "UTC_y:"):
+        elif dataName == "UTC_y:":
             pass
-        elif (dataName == "UTC_M:"):
+        elif dataName == "UTC_M:":
             pass
-        elif (dataName == "UTC_d:"):
+        elif dataName == "UTC_d:":
             pass
-        elif (dataName == "UTC_h:"):
+        elif dataName == "UTC_h:":
             pass
-        elif (dataName == "UTC_m:"):
+        elif dataName == "UTC_m:":
             pass
-        elif (dataName == "UTC_s:"):
+        elif dataName == "UTC_s:":
             pass
-        elif (dataName == "SOG:"):
+        elif dataName == "SOG:":
             pass
-        elif (dataName == "COG:"):
+        elif dataName == "COG:":
             pass
-
-
-
 
     @pyqtSlot()
     def processAT(self):
@@ -299,52 +282,46 @@ class App(QDialog):
               self.UAV_AT_Command_Line.text().lower().split(" ")[1] == "on"):
             self.echo = False
 
-        commands = "Echo: " + self.UAV_AT_Command_Line.text() + "\n";
+        commands = "Echo: " + self.UAV_AT_Command_Line.text() + "\n"
 
-        #test if GS is connected
-        if(portOpen):
-            if(self.echo):
-                #echo command
+        # test if GS is connected
+        if portOpen:
+            if self.echo:
+                # echo command
                 self.Command_Output.append(commands)
         else:
-            #print error
+            # print error
             self.Command_Output.append("GS NOT CONNECTED")
 
-        #clear user input
+        # clear user input
         self.UAV_AT_Command_Line.clear()
-
-
-
 
     def refreshPorts(self):
         try:
             portList = []
             ports = serial_ports()
 
-            #only execute if you don't already have a connection to the GS
-            if(not ser.is_open):
-                if (len(ports) > 0):
+            # only execute if you don't already have a connection to the GS
+            if not ser.is_open:
+                if len(ports) > 0:
                     for port in range(len(ports)):
                         portList.append(self.tr(str(ports[port])))
 
                 self.COM_Select.clear()
 
-                if (len(ports) > 0):
+                if len(ports) > 0:
                     self.COM_Select.addItems(portList)
                 else:
                     self.COM_Select.addItem("None Available")
         except Exception:
             print(traceback.format_exc())
 
-
-
-
     def connectPort(self):
         port = self.COM_Select.currentText()
 
-        if (not (port == "None Available")):
+        if not (port == "None Available"):
             try:
-                if(ser.port != str(port) or not ser.is_open):
+                if ser.port != str(port) or not ser.is_open:
                     ser.baudrate = 115200
                     ser.port = str(port)
                     ser.open()
@@ -354,8 +331,6 @@ class App(QDialog):
                 self.Command_Output.append("ERROR - CANNOT CONNECT TO COM PORT\n")
         else:
             self.Command_Output.append("No Radio COM Port Available - Check Device Manager and/or Wiring\n")
-
-
 
 
 if __name__ == '__main__':
