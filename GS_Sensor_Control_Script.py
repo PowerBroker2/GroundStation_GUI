@@ -69,12 +69,13 @@ Axis[2]= 	rudder	 				            Nose L= -1	Nose R= 1
 import traceback
 import sys
 from datetime import datetime
-import glob
+from time import sleep
+import pygame
 import serial
 import cv2
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QDialog, QPushButton
+from PyQt5.QtWidgets import QApplication, QDialog
 from PyQt5.uic import loadUi
 
 
@@ -98,6 +99,9 @@ dataloggerName = (r"testFlight_"
                   + str(datetime.now().isoformat())[:19].replace("-", "_").replace(":", "_").replace("T", "_")
                   + r".txt")
 
+
+def map(x, in_min, in_max, out_min, out_max):
+    return int((x-in_min) * (out_max-out_min) / (in_max-in_min) + out_min)
 
 def serial_ports():
     """
@@ -147,8 +151,8 @@ class CVThread(QThread):
                     p = convertToQtFormat.scaled(640 * 2, 480 * 2, Qt.KeepAspectRatio)
                     self.changePixmap.emit(p)
 
-        except Exception:
-            print(traceback.format_exc())
+        except:
+            traceback.print_exc()
 
 
 class radioThread(QThread):
@@ -157,29 +161,70 @@ class radioThread(QThread):
 
     def run(self):
         # run forever
-        while(True):
+        while True:
             try:
                 # open and append telemetry to logging .txt
                 with open(dataloggerName, 'a') as f:
                     # run forever
-                    while (True):
+                    while True:
                         # test if serial port is open
-                        if (ser.is_open):
+                        if ser.is_open:
                             # get the data
                             data = str(ser.readline())
                             data = data.replace("b'", "")
                             data = data.replace("'", "")
                             data = data.replace(r"\r\n", "\n")
 
-                            # write the data to the datalogging file
+                            # write the data to the data logging file
                             f.write(data)
 
                             if data != '\n':
                                 # optional debugging print
                                 self.updateVals.emit(data)
 
-            except Exception:
-                print(traceback.format_exc())
+            except:
+                traceback.print_exc()
+
+
+class joystickThread(QThread):
+    # create a pySignal to tell GUI when new data has arrived
+    updateVals = pyqtSignal(dict)
+
+    joy_dict = {'FPV_Cam_Pan': 0,
+                'FPV_Cam_Tilt': 0,
+                'Bomb_Bay': 0}
+
+    def run(self):
+        pygame.init()
+
+        # Loop until the user clicks the close button.
+        done = False
+
+        # Initialize the joysticks
+        pygame.joystick.init()
+
+        while not done:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    done = True
+
+            # Get count of joysticks
+            joystick_count = pygame.joystick.get_count()
+
+            # For each joystick:
+            for i in range(joystick_count):
+                joystick = pygame.joystick.Joystick(i)
+                joystick.init()
+
+                # Get the name from the OS for the controller/joystick
+                name = joystick.get_name()
+                if name == "T.16000M":
+                    self.joy_dict['FPV_Cam_Pan'] = map(joystick.get_axis(0), -1, 1, 0, 255)
+                    self.joy_dict['FPV_Cam_Tilt'] = map(joystick.get_axis(1), -1, 1, 0, 255)
+                    self.joy_dict['Bomb_Bay'] = int(joystick.get_button(0))
+
+            # 50Hz refresh rate
+            sleep(0.02)
 
 
 # noinspection SpellCheckingInspection
@@ -209,68 +254,77 @@ class App(QDialog):
         # initialize threads and show GUI
         self.initUI()
 
-    @pyqtSlot(QImage)
-    def setImage(self, image):
-        if self.EnableFPV.isChecked():
-            self.FPV_Feed.setPixmap(QPixmap.fromImage(image))
-
     def initUI(self):
         # set window shape and size
         self.setGeometry(self.left, self.top, self.width, self.height)
 
         # do video processing on a separate thread (parallel processing for speed)
-        vidThead = CVThread(self)
-        vidThead.changePixmap.connect(self.setImage)
-        vidThead.start()
+        vid_thead = CVThread(self)
+        vid_thead.changePixmap.connect(self.setImage)
+        vid_thead.start()
 
         # take care of serial port/data handling
-        dataThread = radioThread(self)
-        dataThread.updateVals.connect(self.updateTelem)
-        dataThread.start()
+        data_thread = radioThread(self)
+        data_thread.updateVals.connect(self.updateTelem)
+        data_thread.start()
+
+        # take care of joystick handling
+        joystick_thread = joystickThread(self)
+        joystick_thread.updateVals.connect(self.processJoy)
+        joystick_thread.start()
 
         # display the GUI
         self.show()
 
+    @pyqtSlot(QImage)
+    def setImage(self, image):
+        if self.EnableFPV.isChecked():
+            self.FPV_Feed.setPixmap(QPixmap.fromImage(image))
+
+    @pyqtSlot()
     def updateTelem(self, data):
         # get rid of newline chars
         data.replace("\n", "")
 
         # get the name
-        dataName = data.split(" ")[0]
+        data_name = data.split(" ")[0]
 
         # get the numerical data
-        dataValue = data.split(" ")[1]
+        data_value = data.split(" ")[1]
 
-        if dataName == "Alt:":
-            self.Altitude.display(float(dataValue))
-        elif dataName == "Roll:":
+        if data_name == "Alt:":
+            self.Altitude.display(float(data_value))
+        elif data_name == "Roll:":
+            self.RollAngle.display(float(data_value))
+        elif data_name == "Pitch:":
+            self.PitchAngle.display(float(data_value))
+        elif data_name == "Vel:":
+            self.Airspeed.display(float(data_value))
+        elif data_name == "Lat:":
+            self.Latitude.display(float(data_value))
+        elif data_name == "Lon:":
+            self.Longitude.display(float(data_value))
+        elif data_name == "UTC_y:":
             pass
-        elif dataName == "Pitch:":
+        elif data_name == "UTC_M:":
             pass
-        elif dataName == "Vel:":
-            self.Airspeed.display(float(dataValue))
-        elif dataName == "Lat:":
-            self.Latitude.display(float(dataValue))
-        elif dataName == "Lon:":
-            self.Longitude.display(float(dataValue))
-        elif dataName == "UTC_y:":
+        elif data_name == "UTC_d:":
             pass
-        elif dataName == "UTC_M:":
+        elif data_name == "UTC_h:":
             pass
-        elif dataName == "UTC_d:":
+        elif data_name == "UTC_m:":
             pass
-        elif dataName == "UTC_h:":
+        elif data_name == "UTC_s:":
             pass
-        elif dataName == "UTC_m:":
+        elif data_name == "SOG:":
             pass
-        elif dataName == "UTC_s:":
-            pass
-        elif dataName == "SOG:":
-            pass
-        elif dataName == "COG:":
+        elif data_name == "COG:":
             pass
 
-    @pyqtSlot()
+    @pyqtSlot(dict)
+    def processJoy(self, joyDict):
+        pass
+
     def processAT(self):
         """
         Type "Echo on" or "Echo Off" to toggle whether or not the typed commands show up in the output
@@ -313,8 +367,8 @@ class App(QDialog):
                     self.COM_Select.addItems(portList)
                 else:
                     self.COM_Select.addItem("None Available")
-        except Exception:
-            print(traceback.format_exc())
+        except:
+            traceback.print_exc()
 
     def connectPort(self):
         port = self.COM_Select.currentText()
