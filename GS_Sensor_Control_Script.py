@@ -94,11 +94,6 @@ ser = serial.Serial()
 # determines if GS port is open/connected or not
 portOpen = False
 
-# data logging file name
-dataloggerName = (r"testFlight_"
-                  + str(datetime.now().isoformat())[:19].replace("-", "_").replace(":", "_").replace("T", "_")
-                  + r".txt")
-
 
 def map(x, in_min, in_max, out_min, out_max):
     return int((x-in_min) * (out_max-out_min) / (in_max-in_min) + out_min)
@@ -163,10 +158,12 @@ class radioThread(QThread):
         # run forever
         while True:
             try:
-                # open and append telemetry to logging .txt
-                with open(dataloggerName, 'a') as f:
-                    # run forever
-                    while True:
+                with open("threadComm.txt", 'r') as inFile:
+                    contents = inFile.read().split("\n")
+
+                if contents[0] == 'Y':
+                    # open and append telemetry to logging .txt
+                    with open(contents[1], 'a') as f:
                         # test if serial port is open
                         if ser.is_open:
                             # get the data
@@ -223,6 +220,8 @@ class joystickThread(QThread):
                     self.joy_dict['FPV_Cam_Tilt'] = map(joystick.get_axis(1), -1, 1, 0, 255)
                     self.joy_dict['Bomb_Bay'] = int(joystick.get_button(0))
 
+            self.updateVals.emit(self.joy_dict)
+
             # 50Hz refresh rate
             sleep(0.02)
 
@@ -233,6 +232,8 @@ class App(QDialog):
         # initialize the GUI
         super().__init__()
         loadUi('GS_GUI.ui', self)
+
+        self.dataloggerName = ""
 
         # echo AT commands on by default
         self.echo = True
@@ -250,6 +251,8 @@ class App(QDialog):
         self.Refresh_Ports.clicked.connect(self.refreshPorts)
         self.Send_Commands.clicked.connect(self.processAT)
         self.Connect_Radio.clicked.connect(self.connectPort)
+        self.EnableDatalogging.toggled.connect(self.updateThreadComms)
+        self.NewFlight.clicked.connect(self.updateLogName)
 
         # initialize threads and show GUI
         self.initUI()
@@ -257,6 +260,13 @@ class App(QDialog):
     def initUI(self):
         # set window shape and size
         self.setGeometry(self.left, self.top, self.width, self.height)
+
+        self.dataloggerName = (r"testFlight_"
+                              + str(datetime.now().isoformat())[:19].replace("-", "_").replace(":", "_").replace("T", "_")
+                              + r".txt")
+
+        with open("threadComm.txt", 'w') as outFile:
+            outFile.write("N\n" + self.dataloggerName)
 
         # do video processing on a separate thread (parallel processing for speed)
         vid_thead = CVThread(self)
@@ -323,7 +333,14 @@ class App(QDialog):
 
     @pyqtSlot(dict)
     def processJoy(self, joyDict):
-        pass
+        if ser.is_open:
+            packet = ("<"
+                      + joyDict['FPV_Cam_Pan']
+                      + joyDict['FPV_Cam_Tilt']
+                      + joyDict['Bomb_Bay']
+                      + ">\n")
+
+            ser.write(packet.encode())
 
     def processAT(self):
         """
@@ -385,6 +402,31 @@ class App(QDialog):
                 self.Command_Output.append("ERROR - CANNOT CONNECT TO COM PORT\n")
         else:
             self.Command_Output.append("No Radio COM Port Available - Check Device Manager and/or Wiring\n")
+
+    def updateThreadComms(self):
+        with open("threadComm.txt", 'r') as inFile:
+            contents = inFile.read().split("\n")
+
+        with open("threadComm.txt", 'w') as outFile:
+            if self.EnableDatalogging.isChecked():
+                outFile.write("Y\n")
+
+            else:
+                outFile.write("N\n")
+
+            outFile.write(contents[1])
+
+    def updateLogName(self):
+        self.dataloggerName = (r"testFlight_"
+                               + str(datetime.now().isoformat())[:19].replace("-", "_").replace(":", "_").replace("T", "_")
+                               + r".txt")
+
+        with open("threadComm.txt", 'r') as inFile:
+            contents = inFile.read().split("\n")
+
+        with open("threadComm.txt", 'w') as outFile:
+            outFile.write(contents[0] + "\n")
+            outFile.write(self.dataloggerName)
 
 
 if __name__ == '__main__':

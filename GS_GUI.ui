@@ -180,6 +180,13 @@
     <enum>QFrame::Raised</enum>
    </property>
    <layout class="QGridLayout" name="gridLayout">
+    <item row="1" column="0">
+     <widget class="QCheckBox" name="EnableDatalogging">
+      <property name="text">
+       <string>Enable Datalogging</string>
+      </property>
+     </widget>
+    </item>
     <item row="0" column="0">
      <widget class="QCheckBox" name="EnableFPV">
       <property name="text">
@@ -187,10 +194,13 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="0">
-     <widget class="QCheckBox" name="EnableDatalogging">
+    <item row="2" column="0">
+     <widget class="QPushButton" name="NewFlight">
+      <property name="toolTip">
+       <string>New Datalogging File</string>
+      </property>
       <property name="text">
-       <string>Enable Datalogging</string>
+       <string>New Flight</string>
       </property>
      </widget>
     </item>
@@ -239,7 +249,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Toggle Options</string>
+    <string>Options</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
